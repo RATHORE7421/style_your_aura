@@ -4,51 +4,67 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.shortcuts import render, redirect
 from django.contrib import messages 
 from django.http import HttpResponse
-# Create your views here.
+from django.views import View
+from django.urls import reverse_lazy
+from django.views.generic.edit import FormView
 
-def home(request):
-    return render(request, 'core/home.html');
 
-def register(request):
-    if request.method=='POST':
-        form = UserCreationForm(request.POST)
+
+class HomeView(View):
+    def get(self, request):
+        return render(request, 'core/home.html')
+
+
+class RegisterView(View):
+    template_name = 'core/register.html'
+    form_class = UserCreationForm
+
+    def get(self, request):
+        form = self.form_class()
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        form = self.form_class(request.POST)
         if form.is_valid():
             form.save()
             username = form.cleaned_data.get('username')
-            raw_password = form.cleaned_data.get('password')
-            user = authenticate(request, username=username, password = raw_password)
-            login(request, user)
-            messages.success(request, "Registration Successful")
-            return redirect('login')
-        else:
-            messages.error(request, "Registration Failed, Please Try Again")
-    else:
-        form = UserCreationForm()
-    return render(request, 'sign_up.html', {'form': form})
-
-def user_login(request):
-    if request.method=='POST':
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.data_cleaned.get('username')
-            password = form.data_cleaned.get('password')
-            user = authenticate(username=username, password=password)
-            if user is not None:
+            raw_password = form.cleaned_data.get('password1')  # Use 'password1' field for password
+            user = authenticate(request, username=username, password=raw_password)
+            if user:
                 login(request, user)
-                messages.success(request, f"Welcome Back {username}")
-                return redirect(None)
-            else:
-                messages.error("Invalid Username and Password")
-        else:
-            messages.error("Invalid Username and Password")
-    else:
-        form = AuthenticationForm()
-    return render(request, 'usrs/login.html', {'form':form})
+                messages.success(request, "Registration Successful")
+                return redirect('login')
+        messages.error(request, "Registration Failed, Please Try Again")
+        return render(request, self.template_name, {'form': form})
 
-def user_logout(request):
-    logout(request)
-    messages.success(request, "You have been logged out")
-    return redirect('home')
+
+
+class UserLoginView(FormView):
+    form_class = AuthenticationForm
+    template_name = 'core/login.html'
+    success_url = reverse_lazy('home')  # Use reverse_lazy to defer URL resolution
+
+    def form_valid(self, form):
+        username = form.cleaned_data.get('username')
+        password = form.cleaned_data.get('password')
+        user = authenticate(username=username, password=password)
+        if user is not None:
+            login(self.request, user)
+            messages.success(self.request, f"Welcome Back {username}")
+            return super().form_valid(form)
+        else:
+            form.add_error(None, "Invalid Username and Password")
+            return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Invalid Username and Password")
+        return super().form_invalid(form)
+
+
+class LogoutView(View):
+    def get(self, request):
+        logout(request)
+        return redirect('home') 
 
 
 

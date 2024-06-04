@@ -1,0 +1,16 @@
+{% extends "style_your_aura/base.html" %}
+{% block title %}
+    Login
+{% endblock title %}
+{% block contents %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h2 class="my-3">Login</h2>
+        <form method="post">
+            {% csrf_token %}
+            {% include 'core/form_snippets.html' with form=form %}
+            <button type="submit" class="btn btn-primary mt-3">Login</button>
+        </form>
+    </div>
+</div>
+{% endblock contents %}
